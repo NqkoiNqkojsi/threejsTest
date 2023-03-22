@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - GLTFloader</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+	</head>
+
+	<body>
+		<div id="info">
+			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader<br />
+			Battle Damaged Sci-fi Helmet by
+			<a href="https://sketchfab.com/theblueturtle_" target="_blank" rel="noopener">theblueturtle_</a><br />
+			<a href="https://hdrihaven.com/hdri/?h=royal_esplanade" target="_blank" rel="noopener">Royal Esplanade</a> by <a href="https://hdrihaven.com/" target="_blank" rel="noopener">HDRI Haven</a>
+		</div>
+
+		<!-- Import maps polyfill -->
+		<!-- Remove this when import maps will be widely supported -->
+		<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+		<script type="importmap">
+            {
+                "imports": {
+                    "three": "https://unpkg.com/three@0.138.0/build/three.module.js",
+                    "OrbitControls": "https://unpkg.com/three@0.138.0/examples/jsm/controls/OrbitControls.js",
+					"ArcballControls": "https://unpkg.com/three/examples/jsm/controls/ArcballControls.js",
+                    "GLTFLoader": "https://unpkg.com/three/examples/jsm/loaders/GLTFLoader.js",
+                    "RGBELoader": "https://unpkg.com/three/examples/jsm/loaders/RGBELoader.js",
+                    "EffectComposer": "https://unpkg.com/three/examples/jsm/postprocessing/EffectComposer.js",
+                    "RenderPass": "https://unpkg.com/three/examples/jsm/postprocessing/RenderPass.js",
+                    "Stats": "https://unpkg.com/three/examples/jsm/libs/stats.module.js"
+
+                }
+            }
+        </script>
+
+		<script type="module">
+
+			import * as THREE from 'three';
+
+			import { ArcballControls } from 'ArcballControls';
+			import { GLTFLoader } from 'GLTFLoader';
+			import { RGBELoader } from 'RGBELoader';
+
+			let camera, scene, renderer, controls;
+			let perspectiveDistance=1;
+			let modelVinyl, textureLoader;
+			const texturesPath=["models/textures/texture_4k_CallMe.png","models/textures/texture_4k_Flower.png","models/textures/texture_4k_igor2.png"];
+
+			init();
+			render();
+
+			function init() {
+
+				const container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = makeOrthographicCamera();
+				camera.position.set( - 1.8, 0.6, perspectiveDistance );
+
+				scene = new THREE.Scene();
+				scene.add( new THREE.HemisphereLight( 0x443333, 0x222233, 4 ) );
+
+				new RGBELoader()
+					.load( 'models/textures/venice_sunset_1k.hdr', function ( texture ) {
+
+						texture.mapping = THREE.EquirectangularReflectionMapping;
+						scene.environment = texture;
+
+						render();
+
+						// model
+						textureLoader = new THREE.TextureLoader();
+						let textureObj = textureLoader.load( 'models/textures/texture_4k_igor2.png' );
+						//textureObj.flipY = false;
+
+						const loader = new GLTFLoader();
+						loader.load( 'models/12_vinyl_record/scene.gltf', function ( gltf ) {
+							modelVinyl = gltf.scene;
+							modelVinyl.traverse ( ( o ) => {
+								if ( o.isMesh ) {
+								// note: for a multi-material mesh, `o.material` may be an array,
+								// in which case you'd need to set `.map` on each value.
+								o.material.map = textureObj;
+								}
+							} );
+							scene.add( gltf.scene );
+
+							render();
+
+						} );
+
+					} );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.toneMapping = THREE.ACESFilmicToneMapping;
+				renderer.toneMappingExposure = 1;
+				renderer.outputEncoding = THREE.sRGBEncoding;
+				container.appendChild( renderer.domElement );
+
+				controls = new ArcballControls( camera, renderer.domElement, scene );
+				controls.addEventListener( 'change', render );
+				controls.setCamera( camera );
+
+				window.addEventListener( 'resize', onWindowResize );
+
+			}
+
+			function makeOrthographicCamera() {
+
+				const halfFovV = THREE.MathUtils.DEG2RAD * 45 * 0.5;
+				const halfFovH = Math.atan( ( window.innerWidth / window.innerHeight ) * Math.tan( halfFovV ) );
+
+				const halfW = perspectiveDistance * Math.tan( halfFovH );
+				const halfH = perspectiveDistance * Math.tan( halfFovV );
+				const near = 0.01;
+				const far = 2000;
+				const newCamera = new THREE.OrthographicCamera( - halfW, halfW, halfH, - halfH, near, far );
+				return newCamera;
+
+			}
+
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				render();
+
+			}
+
+			function changeTexture(){
+				textureLoader = new THREE.TextureLoader();
+				let textureObj = textureLoader.load( texturesPath[0] );
+				//textureObj.flipY = false;
+				modelVinyl.traverse ( ( o ) => {
+					if ( o.isMesh ) {
+						// note: for a multi-material mesh, `o.material` may be an array,
+						// in which case you'd need to set `.map` on each value.
+						o.material.map = textureObj;
+					}
+				} );
+				texturesPath.push(texturesPath.shift());
+				console.log(texturesPath);
+				render();
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+
+			}
+
+			document.addEventListener("keydown", function(event) {
+				if (event.isComposing || event.keyCode === 229) {
+					return;
+				}
+				if(event.keyCode === 68){
+					changeTexture();
+				}
+			});
+
+		</script>
+
+	</body>
+</html>

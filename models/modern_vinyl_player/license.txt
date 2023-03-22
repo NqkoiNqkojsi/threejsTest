@@ -1,0 +1,11 @@
+Model Information:
+* title:	Modern vinyl player
+* source:	https://sketchfab.com/3d-models/modern-vinyl-player-8cd6c072be3a41e9aef0afcc6b0aae6c
+* author:	alpaca. (https://sketchfab.com/alpaca.)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Modern vinyl player" (https://sketchfab.com/3d-models/modern-vinyl-player-8cd6c072be3a41e9aef0afcc6b0aae6c) by alpaca. (https://sketchfab.com/alpaca.) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
