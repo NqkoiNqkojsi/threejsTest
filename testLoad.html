@@ -43,13 +43,15 @@
 			import { GLTFLoader } from 'GLTFLoader';
 			import { RGBELoader } from 'RGBELoader';
 
-			let camera, scene, renderer, controls;
+			let camera, scene, renderer, controls, mixer, clock;
 			let perspectiveDistance=1;
 			let modelVinyl, textureLoader;
 			const texturesPath=["models/textures/texture_4k_CallMe.png","models/textures/texture_4k_Flower.png","models/textures/texture_4k_igor2.png"];
+			let isCameraRotating=false;
+			let camPosIndex = 0, vectorPoints = [], spline, lastStaticPosCam;
 
 			init();
-			render();
+			animate();
 
 			function init() {
 
@@ -61,14 +63,15 @@
 
 				scene = new THREE.Scene();
 				scene.add( new THREE.HemisphereLight( 0x443333, 0x222233, 4 ) );
+				const light = new THREE.DirectionalLight( 0xffffff, 0.35 );
+				light.position.set( 1, 1, 1 ).normalize();
+				scene.add( light );
 
 				new RGBELoader()
-					.load( 'models/textures/venice_sunset_1k.hdr', function ( texture ) {
+					.load( 'san_giuseppe_bridge_2k.hdr', function ( texture ) {
 
 						texture.mapping = THREE.EquirectangularReflectionMapping;
 						scene.environment = texture;
-
-						render();
 
 						// model
 						textureLoader = new THREE.TextureLoader();
@@ -87,12 +90,21 @@
 							} );
 							scene.add( gltf.scene );
 
-							render();
-
 						} );
+						// POSITION
+						const positionKF = new THREE.VectorKeyframeTrack( '.position', [ 0, 1, 2 ], [ 0, 0, 0, 30, 0, 0, 0, 0, 0 ] );
+						const clip = new THREE.AnimationClip( 'Action', 3, positionKF );
+						// setup the THREE.AnimationMixer
+						mixer = new THREE.AnimationMixer( modelVinyl );
+
+						// create a ClipAction and set it to play
+						const clipAction = mixer.clipAction( clip );
+						clipAction.play();
 
 					} );
-
+				
+				
+				
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
@@ -105,6 +117,9 @@
 				controls.addEventListener( 'change', render );
 				controls.setCamera( camera );
 
+				clock = new THREE.Clock();
+
+				makeRotation();	
 				window.addEventListener( 'resize', onWindowResize );
 
 			}
@@ -148,10 +163,38 @@
 				} );
 				texturesPath.push(texturesPath.shift());
 				console.log(texturesPath);
+				isCameraRotating=true;
 				render();
 			}
 
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				render();
+
+			}
+
 			function render() {
+
+				const delta = clock.getDelta();
+				if ( mixer ) {
+
+					mixer.update( delta );
+
+				}
+				if(isCameraRotating){
+					if(Math.abs(lastStaticPosCam-camera.position.x)<0.85 && Math.abs(lastStaticPosCam-camera.position.x)>0.1){
+						isCameraRotating=false;
+						console.log(camera.position);
+						console.log(modelVinyl.position);
+						camera.lookAt(modelVinyl.position);
+					}
+					console.log(Math.abs(lastStaticPosCam-camera.position.x));
+					RotateCam();
+				}else{
+					lastStaticPosCam=camera.position.x;
+				}
 
 				renderer.render( scene, camera );
 
@@ -163,8 +206,40 @@
 				}
 				if(event.keyCode === 68){
 					changeTexture();
+					camera.lookAt(spline.getPoint((camPosIndex+1) / 500));
+					modelVinyl.position.x=modelVinyl.position.x+0.7;
 				}
 			});
+			function makeRotation(){
+				let lastVector= new THREE.Vector2(camera.position.x, camera.position.y)
+				for ( var i = 0; i < 20; i ++ ) {
+					lastVector=new THREE.Vector2(lastVector.x+0.05, lastVector.y);
+					vectorPoints.push(
+						lastVector
+					);
+				}
+				console.log(vectorPoints);
+				spline = new THREE.SplineCurve(vectorPoints);
+
+			}
+			function RotateCam(){
+				camPosIndex++;
+				if (camPosIndex > 500) {
+					camPosIndex = 0;
+				}
+				let camPos = spline.getPoint(camPosIndex / 500);
+				let camRot = spline.getTangent(camPosIndex / 500);
+
+				camera.position.x = camPos.x;
+				camera.position.y = camPos.y;
+				
+				
+				camera.rotation.x = camRot.x;
+				camera.rotation.y = camRot.y;
+				
+				
+				camera.lookAt(spline.getPoint((camPosIndex+1) / 500));
+			}
 
 		</script>
 
